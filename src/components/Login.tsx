@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Wheat, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { supabase } from '../lib/supabase';
 
 interface LoginProps {
   onLogin: (user: { name: string; email: string; avatar?: string; createdAt: string }) => void;
@@ -15,29 +16,78 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
     password: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Create user object and call onLogin
-    const user = {
-      name: isSignUp ? formData.name : formData.email.split('@')[0],
-      email: formData.email,
-      createdAt: new Date().toISOString(),
-    };
-    onLogin(user);
+    try {
+      if (isSignUp) {
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.name
+            }
+          }
+        });
+        if (error) throw error;
+        if (data.user && !data.user.email_confirmed_at) {
+          alert('Please check your email to verify your account!');
+        } else if (data.user) {
+          onNavigate('home');
+        }
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
+        });
+        if (error) throw error;
+        onNavigate('home');
+      }
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    // Simulate Google login
-    const user = {
-      name: 'Demo User',
-      email: 'demo@ferti-ai.com',
-      createdAt: new Date().toISOString(),
-    };
-    onLogin(user);
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Google login failed. Please try again.');
+    }
   };
 
   const handleBack = () => {
     onNavigate('home');
+  };
+
+  const handleForgotPassword = async () => {
+    const email = prompt('Enter your email address:');
+    if (email) {
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`
+        });
+        if (error) throw error;
+        alert(`Password reset link sent to ${email}`);
+      } catch (error: any) {
+        alert(error.message || 'Failed to send reset email');
+      }
+    }
+  };
+
+  const handleTermsClick = () => {
+    alert('Terms of Service: This is a demo application. No real terms apply.');
+  };
+
+  const handlePrivacyClick = () => {
+    alert('Privacy Policy: This demo app does not collect or store personal data.');
   };
 
   return (
@@ -65,20 +115,17 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 sm:p-10 border border-[#0C3C01]/10">
           {/* Logo */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#0C3C01] rounded-full mb-4">
-              <Wheat className="w-8 h-8 text-white" />
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-[#0C3C01] rounded-full mb-3">
+              <Wheat className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-[#0C3C01]">
+            <h2 className="text-[#0C3C01] text-xl">
               Ferti-AI 🌾
             </h2>
-            <p className="text-[#6B7C59] mt-2">
-              Smarter farming starts with you 🌱
-            </p>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-8 bg-[#F6F3E7] p-1 rounded-xl">
+          <div className="flex gap-2 mb-6 bg-[#F6F3E7] p-1 rounded-xl">
             <button
               onClick={() => setIsSignUp(false)}
               className={`flex-1 py-3 rounded-lg transition-all ${
@@ -102,7 +149,7 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <div className="space-y-2">
                 <label className="block text-[#0C3C01]">
@@ -165,7 +212,7 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
                   />
                   Remember me
                 </label>
-                <button type="button" className="text-[#0C3C01] hover:text-[#355E2D]">
+                <button type="button" onClick={handleForgotPassword} className="text-[#0C3C01] hover:text-[#355E2D]">
                   Forgot password?
                 </button>
               </div>
@@ -185,7 +232,7 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
               <div className="w-full border-t border-[#0C3C01]/20" />
             </div>
             <div className="relative flex justify-center">
-              <span className="px-4 bg-white/80 text-[#6B7C59]">
+              <span className="px-4 bg-white/80 text-[#6B7C59] text-sm">
                 or continue with
               </span>
             </div>
@@ -219,11 +266,11 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
 
           {/* Terms */}
           {isSignUp && (
-            <p className="mt-6 text-center text-xs text-[#6B7C59]">
+            <p className="mt-4 text-center text-xs text-[#6B7C59]">
               By signing up, you agree to our{' '}
-              <button className="text-[#0C3C01] hover:underline">Terms of Service</button>
+              <button onClick={handleTermsClick} className="text-[#0C3C01] hover:underline">Terms</button>
               {' '}and{' '}
-              <button className="text-[#0C3C01] hover:underline">Privacy Policy</button>
+              <button onClick={handlePrivacyClick} className="text-[#0C3C01] hover:underline">Privacy</button>
             </p>
           )}
         </div>

@@ -46,9 +46,11 @@
   }
 
   select option {
-    background-color: #F6F3E7;
-    color: #0C3C01;
-    padding: 8px;
+    background-color: #F6F3E7 !important;
+    color: #0C3C01 !important;
+    padding: 8px !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
   }
 
   select option:hover {
@@ -56,8 +58,23 @@
     color: #0C3C01 !important;
   }
 
-  select option:checked {
-    background-color: #D9D2C2;
+  select option:checked,
+  select option:focus,
+  select option[selected] {
+    background-color: #EAE7E0 !important;
+    color: #0C3C01 !important;
+    outline: none !important;
+  }
+
+  /* Override browser default blue highlighting */
+  select option::selection {
+    background-color: #EAE7E0 !important;
+    color: #0C3C01 !important;
+  }
+
+  select option::-moz-selection {
+    background-color: #EAE7E0 !important;
+    color: #0C3C01 !important;
   }
 }
 

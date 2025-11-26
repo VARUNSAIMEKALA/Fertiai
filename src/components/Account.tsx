@@ -1,4 +1,6 @@
-import { User, Mail, Calendar, LogOut, Leaf } from 'lucide-react';
+import { User, Mail, Calendar, LogOut, Leaf, Edit2 } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface AccountProps {
   user: {
@@ -11,6 +13,41 @@ interface AccountProps {
 }
 
 export function Account({ user, onSignOut }: AccountProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [newName, setNewName] = useState(user.name);
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleUpdateName = async () => {
+    if (!password) {
+      alert('Password is required to update name');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // First verify password by signing in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password
+      });
+      if (signInError) throw signInError;
+      
+      // Then update user metadata
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: newName }
+      });
+      if (error) throw error;
+      
+      alert('Name updated successfully!');
+      setIsEditing(false);
+      setPassword('');
+    } catch (error: any) {
+      alert(error.message);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
@@ -59,9 +96,54 @@ export function Account({ user, onSignOut }: AccountProps) {
                 <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center flex-shrink-0">
                   <User className="w-6 h-6 text-[#0C3C01]" />
                 </div>
-                <div>
-                  <h3 className="text-[#0C3C01] mb-1">Full Name</h3>
-                  <p className="text-[#6B7C59]">{user.name}</p>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-[#0C3C01]">Full Name</h3>
+                    <button
+                      onClick={() => setIsEditing(!isEditing)}
+                      className="text-[#6B7C59] hover:text-[#0C3C01] transition-colors"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-[#0C3C01]/20 rounded-lg focus:outline-none focus:border-[#0C3C01] text-[#0C3C01]"
+                      />
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter password to confirm"
+                        className="w-full px-3 py-2 bg-white border border-[#0C3C01]/20 rounded-lg focus:outline-none focus:border-[#0C3C01] text-[#0C3C01]"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleUpdateName}
+                          disabled={loading}
+                          className="px-4 py-2 bg-[#0C3C01] text-white rounded-lg hover:bg-[#355E2D] transition-colors disabled:opacity-50"
+                        >
+                          {loading ? 'Updating...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setIsEditing(false);
+                            setNewName(user.name);
+                            setPassword('');
+                          }}
+                          className="px-4 py-2 bg-[#8B7765] text-white rounded-lg hover:bg-[#6B7C59] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[#6B7C59]">{user.name}</p>
+                  )}
                 </div>
               </div>
 
@@ -89,25 +171,6 @@ export function Account({ user, onSignOut }: AccountProps) {
               <LogOut className="w-5 h-5 group-hover:transform group-hover:translate-x-1 transition-transform" />
               Sign Out
             </button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-gradient-to-br from-[#0C3C01] to-[#355E2D] rounded-2xl p-6 text-white text-center">
-            <div className="text-4xl mb-2">🌾</div>
-            <p className="text-white/80 text-sm">Total Plans</p>
-            <p className="text-3xl mt-2">12</p>
-          </div>
-          <div className="bg-gradient-to-br from-[#355E2D] to-[#4A7C3D] rounded-2xl p-6 text-white text-center">
-            <div className="text-4xl mb-2">💬</div>
-            <p className="text-white/80 text-sm">Chats</p>
-            <p className="text-3xl mt-2">8</p>
-          </div>
-          <div className="bg-gradient-to-br from-[#4A7C3D] to-[#5D9A4E] rounded-2xl p-6 text-white text-center">
-            <div className="text-4xl mb-2">📊</div>
-            <p className="text-white/80 text-sm">Acres Managed</p>
-            <p className="text-3xl mt-2">45</p>
           </div>
         </div>
       </div>

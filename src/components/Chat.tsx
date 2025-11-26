@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Leaf, Trash2, Download, Upload } from 'lucide-react';
+import { Send, Leaf, Trash2, Download, Upload, HelpCircle } from 'lucide-react';
+import { generateChatResponse } from '../lib/gemini';
 
 interface Message {
   id: string;
@@ -12,12 +13,77 @@ interface ChatProps {
   onNavigate: (page: string, data?: any) => void;
 }
 
+// Simple agricultural bot responses
+const agriculturalBot = {
+  getResponse(question: string): string {
+    const normalizedQuestion = question.toLowerCase().trim();
+    
+    // Paddy/Rice related questions
+    if (normalizedQuestion.includes('paddy') || normalizedQuestion.includes('rice')) {
+      if (normalizedQuestion.includes('clay') || normalizedQuestion.includes('soil')) {
+        return 'Yes! Clay soil is excellent for paddy cultivation. Clay retains water well, which is perfect for rice farming. Ensure proper drainage during non-flooding periods and add organic matter to improve soil structure. 🌾';
+      }
+      if (normalizedQuestion.includes('water')) {
+        return 'Rice needs 1200-1500mm of water during its growing season. Maintain 2-5cm standing water in fields during vegetative and reproductive stages. Drain fields 2 weeks before harvest. 💧';
+      }
+      return 'Rice grows best in clay or loamy soil with good water retention. It needs consistent flooding during growth stages and proper drainage before harvest. 🌾';
+    }
+    
+    // Wheat related questions
+    if (normalizedQuestion.includes('wheat')) {
+      return 'For wheat, use NPK fertilizer (120:60:40 kg/ha). Apply nitrogen in 3 splits: 50% at sowing, 25% at tillering, and 25% at grain filling stage. Add phosphorus and potash at sowing time. 🌾';
+    }
+    
+    // Tomato related questions
+    if (normalizedQuestion.includes('tomato')) {
+      return 'Tomatoes thrive in well-drained loamy soil with pH 6.0-6.8. The soil should be rich in organic matter. Avoid waterlogged conditions as they can cause root rot. 🍅';
+    }
+    
+    // Corn/Maize related questions
+    if (normalizedQuestion.includes('corn') || normalizedQuestion.includes('maize')) {
+      return 'Plant corn when soil temperature reaches 60°F (15°C). In most regions, this is late spring after the last frost. Corn needs warm weather and plenty of sunlight to grow well. 🌽';
+    }
+    
+    // Organic fertilizer questions
+    if (normalizedQuestion.includes('organic')) {
+      return 'Organic fertilizers improve soil structure, increase water retention, provide slow-release nutrients, and enhance beneficial microbial activity. They also reduce chemical runoff and are environmentally friendly. 🌱';
+    }
+    
+    // Pest control questions
+    if (normalizedQuestion.includes('pest')) {
+      return 'Use integrated pest management: crop rotation, beneficial insects, neem oil, and organic pesticides. Regular monitoring and early intervention are key to effective pest control. 🐛';
+    }
+    
+    // Soil pH questions
+    if (normalizedQuestion.includes('ph') || normalizedQuestion.includes('acid')) {
+      return 'Most crops prefer pH 6.0-7.0. Acidic soils (pH<6) need lime application. Alkaline soils (pH>8) need sulfur or organic matter. Test soil pH annually for best results. 📊';
+    }
+    
+    // Fertilizer general questions
+    if (normalizedQuestion.includes('fertilizer')) {
+      return 'Choose fertilizers based on your crop and soil test results. NPK ratios vary by crop: vegetables need balanced NPK, cereals need more nitrogen, and fruits need more potassium. 🌱';
+    }
+    
+    // Soil related questions
+    if (normalizedQuestion.includes('soil')) {
+      return 'Good soil should be well-drained, rich in organic matter, and have proper pH. Test your soil annually and add compost to improve structure and fertility. 🌱';
+    }
+    
+    // Water related questions
+    if (normalizedQuestion.includes('water')) {
+      return 'Water requirements vary by crop. Most vegetables need 1-2 inches per week. Water deeply but less frequently to encourage deep root growth. 💧';
+    }
+    
+    return "I can help with questions about crops like paddy, wheat, tomatoes, corn, fertilizers, soil types, pest control, and farming practices. What would you like to know? 🌾";
+  }
+};
+
 export function Chat({ onNavigate }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! 🌾 I'm Ferti-AI, your intelligent farming assistant. I'll help you create the perfect fertilizer plan for your crops. Please fill out the form on the right to get started, or tell me about your farming needs!",
+      content: "Hello! 🌾 I'm Ferti-AI, your agricultural assistant. I can help with basic farming questions. Try the sample questions below or ask about crops, soil, fertilizers, and farming practices!",
       timestamp: new Date(),
     },
   ]);
@@ -31,6 +97,23 @@ export function Chat({ onNavigate }: ChatProps) {
     growthStage: '',
   });
 
+  const handleChatHistoryClick = (chat: any) => {
+    setFormData({
+      cropName: chat.crop,
+      area: chat.area.split(' ')[0],
+      weatherConditions: 'Sunny',
+      soilType: 'Loamy',
+      growthStage: 'Vegetative',
+    });
+    const historyMessage: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: `I've loaded your previous ${chat.crop} plan. You can modify the details in the form or generate a new plan! 🌱`,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, historyMessage]);
+  };
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -41,7 +124,7 @@ export function Chat({ onNavigate }: ChatProps) {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     const newMessage: Message = {
@@ -52,23 +135,42 @@ export function Chat({ onNavigate }: ChatProps) {
     };
 
     setMessages((prev) => [...prev, newMessage]);
+    const userInput = inputMessage;
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
+    try {
+      // Try API first, fallback to simple bot
+      let aiResponse;
+      try {
+        aiResponse = await generateChatResponse(userInput, formData);
+      } catch (apiError) {
+        // Use simple bot when API fails
+        aiResponse = agriculturalBot.getResponse(userInput);
+      }
+      
+      const responseMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "That's great information! To provide you with the most accurate fertilizer recommendation, could you please fill out the form with details about your crop, soil pH, and growth stage? This will help me analyze your specific needs. 🌱",
+        content: aiResponse,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, aiResponse]);
+      setMessages((prev) => [...prev, responseMessage]);
+    } catch (error) {
+      console.error('Chat Error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: agriculturalBot.getResponse(userInput),
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 2000);
+    }
   };
 
-  const handleGeneratePlan = () => {
+  const handleGeneratePlan = async () => {
     if (!formData.cropName || !formData.soilType) {
       const errorMessage: Message = {
         id: Date.now().toString(),
@@ -81,22 +183,18 @@ export function Chat({ onNavigate }: ChatProps) {
     }
 
     setIsTyping(true);
+    const successMessage: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: `Perfect! I've analyzed your ${formData.cropName} in ${formData.soilType} soil. Generating your customized fertilizer plan now... 🌿`,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, successMessage]);
+    setIsTyping(false);
 
     setTimeout(() => {
-      const successMessage: Message = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `Perfect! I've analyzed your ${formData.cropName} in ${formData.soilType} soil. Generating your customized fertilizer plan now... 🌿`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, successMessage]);
-      setIsTyping(false);
-
-      // Navigate to results page with form data
-      setTimeout(() => {
-        onNavigate('results', formData);
-      }, 1500);
-    }, 2000);
+      onNavigate('results', formData);
+    }, 1500);
   };
 
   const handleClearChat = () => {
@@ -126,6 +224,7 @@ export function Chat({ onNavigate }: ChatProps) {
               ].map((chat, index) => (
                 <button
                   key={index}
+                  onClick={() => handleChatHistoryClick(chat)}
                   className="w-full text-left p-3 rounded-xl hover:bg-[#EAE7E0] transition-colors border border-transparent hover:border-[#0C3C01]/20 group"
                 >
                   <p className="text-[#0C3C01] font-medium">{chat.crop}</p>
@@ -272,7 +371,7 @@ export function Chat({ onNavigate }: ChatProps) {
                 <select
                   value={formData.soilType}
                   onChange={(e) => setFormData({ ...formData, soilType: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#F6F3E7] border border-[#0C3C01]/20 rounded-xl focus:outline-none focus:border-[#0C3C01] transition-colors text-[#0C3C01]"
+                  className="w-full px-4 py-3 bg-[#F6F3E7] border border-[#0C3C01]/20 rounded-xl focus:outline-none focus:border-[#0C3C01] hover:bg-[#EAE7E0] hover:border-[#0C3C01] transition-all text-[#0C3C01] [&>option]:bg-[#F6F3E7] [&>option]:text-[#0C3C01] [&>option:hover]:bg-[#EAE7E0] [&>option:hover]:text-[#0C3C01] [&>option]:transition-all"
                 >
                   <option value="">Select soil type</option>
                   <option value="Clay">Clay</option>
@@ -291,7 +390,7 @@ export function Chat({ onNavigate }: ChatProps) {
                 <select
                   value={formData.growthStage}
                   onChange={(e) => setFormData({ ...formData, growthStage: e.target.value })}
-                  className="w-full px-4 py-3 bg-[#F6F3E7] border border-[#0C3C01]/20 rounded-xl focus:outline-none focus:border-[#0C3C01] transition-colors text-[#0C3C01]"
+                  className="w-full px-4 py-3 bg-[#F6F3E7] border border-[#0C3C01]/20 rounded-xl focus:outline-none focus:border-[#0C3C01] hover:bg-[#EAE7E0] hover:border-[#0C3C01] transition-all text-[#0C3C01] [&>option]:bg-[#F6F3E7] [&>option]:text-[#0C3C01] [&>option:hover]:bg-[#EAE7E0] [&>option:hover]:text-[#0C3C01] [&>option]:transition-all"
                 >
                   <option value="">Select growth stage</option>
                   <option value="Seedling">Seedling</option>
