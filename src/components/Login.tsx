@@ -161,7 +161,7 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="John Doe"
+                    placeholder="Ram"
                     className="w-full pl-12 pr-4 py-3 bg-[#F6F3E7] border border-[#0C3C01]/20 rounded-xl focus:outline-none focus:border-[#0C3C01] transition-colors text-[#0C3C01]"
                     required
                   />

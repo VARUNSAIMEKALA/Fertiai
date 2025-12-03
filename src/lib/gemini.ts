@@ -97,10 +97,58 @@ function getSimpleBotResponse(question: string): string {
     return 'Water requirements vary by crop. Most vegetables need 1-2 inches per week. Water deeply but less frequently to encourage deep root growth. 💧';
   }
   
-  return "I can help with questions about crops like paddy, wheat, tomatoes, corn, fertilizers, soil types, pest control, and farming practices. What would you like to know? 🌾";
+  // Crop rotation questions
+  if (normalizedQuestion.includes('rotation') || normalizedQuestion.includes('rotate')) {
+    return 'Crop rotation prevents soil depletion and pest buildup. Rotate between legumes (beans), cereals (wheat), and root crops (potatoes). Follow nitrogen-fixing crops with heavy feeders. 🔄';
+  }
+  
+  // Seed questions
+  if (normalizedQuestion.includes('seed')) {
+    return 'Use certified seeds for better yield. Treat seeds with fungicide before sowing. Check germination rate by testing 100 seeds - aim for 80%+ germination. Store seeds in cool, dry places. 🌱';
+  }
+  
+  // Irrigation questions
+  if (normalizedQuestion.includes('irrigation') || normalizedQuestion.includes('drip')) {
+    return 'Drip irrigation saves 30-50% water and reduces disease. Install emitters near plant roots. Water early morning to reduce evaporation. Check soil moisture at 6-inch depth. 💧';
+  }
+  
+  // Compost questions
+  if (normalizedQuestion.includes('compost')) {
+    return 'Good compost needs 3:1 carbon to nitrogen ratio. Mix dry leaves (carbon) with kitchen scraps (nitrogen). Turn weekly, keep moist. Ready in 3-6 months when dark and crumbly. 🍂';
+  }
+  
+  // Disease questions
+  if (normalizedQuestion.includes('disease') || normalizedQuestion.includes('fungus')) {
+    return 'Prevent plant diseases with proper spacing for air circulation. Remove infected plants immediately. Use copper-based fungicides for organic control. Avoid overhead watering. 🦠';
+  }
+  
+  // Harvest questions
+  if (normalizedQuestion.includes('harvest') || normalizedQuestion.includes('when to pick')) {
+    return 'Harvest vegetables when mature but tender. Pick fruits when color develops but still firm. Harvest grains when moisture content is 14-20%. Early morning harvest retains freshness. 🌾';
+  }
+  
+  // Mulching questions
+  if (normalizedQuestion.includes('mulch')) {
+    return 'Mulch conserves moisture, suppresses weeds, and regulates soil temperature. Use organic mulch like straw or leaves. Apply 2-4 inches thick, keep away from plant stems. 🍃';
+  }
+  
+  // Greenhouse questions
+  if (normalizedQuestion.includes('greenhouse') || normalizedQuestion.includes('polyhouse')) {
+    return 'Greenhouses extend growing seasons and protect from weather. Maintain 60-70°F temperature and 50-70% humidity. Ensure proper ventilation to prevent fungal diseases. 🏠';
+  }
+  
+  // Nitrogen questions
+  if (normalizedQuestion.includes('nitrogen') || normalizedQuestion.includes('yellowing')) {
+    return 'Nitrogen deficiency causes yellowing leaves starting from bottom. Apply urea (46% N) or use organic sources like compost. Split nitrogen application for better uptake. 🍃';
+  }
+  
+  return "I can help with farming questions about: crops (paddy, wheat, tomatoes, corn), fertilizers, soil, pest control, irrigation, composting, diseases, harvesting, mulching, greenhouses, and more! 🌾";
 }
 
 export async function generateChatResponse(message: string, formData?: any) {
+  // Always use simple bot for now since API keys may not work
+  return getSimpleBotResponse(message);
+  
   if (!apiKey || !model) {
     return getSimpleBotResponse(message);
   }
